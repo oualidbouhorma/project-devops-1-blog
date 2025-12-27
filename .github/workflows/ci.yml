@@ -1,0 +1,58 @@
+name: Deploy Hugo Site to Pages
+
+on:
+  push:
+    branches: ["main"]
+  pull_request: # Se ejecuta en PRs para verificar que no rompemos nada, pero no despliega
+  workflow_dispatch: # Permite ejecución manual desde la UI de GitHub
+
+# Permisos necesarios para escribir en Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Concurrencia: cancela builds anteriores si empujas código nuevo rápido
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  # Job de Construcción
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive # Importante para traer el tema PaperMod
+          fetch-depth: 0
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v2
+        with:
+          hugo-version: 'latest'
+          extended: true
+
+      - name: Build
+        run: hugo --minify
+
+      - name: Upload artifact
+        # Solo subimos el artefacto si vamos a desplegar (push a main)
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./public
+
+  # Job de Despliegue (Solo en main)
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

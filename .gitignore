@@ -1,0 +1,6 @@
+.DS_Store
+docs/evidence/*
+!docs/evidence/.gitkeep
+.env
+echo "public/" >> .gitignore
+echo "resources/" >> .gitignore

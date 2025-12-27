@@ -1,0 +1,8 @@
+baseURL: "https://oualidbouhorma.io/devops-1-blog/"
+languageCode: "en-us"
+title: "My DevOps Lab"
+theme: "PaperMod"
+
+params:
+  defaultTheme: "auto"
+  ShowReadingTime: true
