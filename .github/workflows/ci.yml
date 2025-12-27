@@ -3,30 +3,27 @@ name: Deploy Hugo Site to Pages
 on:
   push:
     branches: ["main"]
-  pull_request: # Se ejecuta en PRs para verificar que no rompemos nada, pero no despliega
-  workflow_dispatch: # Permite ejecución manual desde la UI de GitHub
+  pull_request: # Se ejecuta en PRs para verificar enlaces y build
+  workflow_dispatch:
 
-# Permisos necesarios para escribir en Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Concurrencia: cancela builds anteriores si empujas código nuevo rápido
 concurrency:
   group: "pages"
   cancel-in-progress: true
 
 jobs:
-  # Job de Construcción
+  # Job de Construcción y Verificación
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: recursive # Importante para traer el tema PaperMod
-          fetch-depth: 0
+          submodules: recursive
 
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v2
@@ -37,8 +34,20 @@ jobs:
       - name: Build
         run: hugo --minify
 
+      # --- NUEVO PASO: LINK CHECKER ---
+      # Esto cumple el requisito "CI en PR (link-check)"
+      # Verifica enlaces en los archivos generados (carpeta public)
+      # Falla la pipeline si encuentra enlaces rotos internos o externos
+      - name: Link Checker (Lychee)
+        uses: lycheeverse/lychee-action@v1.9.0
+        with:
+          # Escanea la carpeta 'public' (el sitio generado)
+          args: --verbose --no-progress './public/**/*.html'
+          # Falla la acción si hay enlaces rotos
+          fail: true
+
       - name: Upload artifact
-        # Solo subimos el artefacto si vamos a desplegar (push a main)
+        # Solo subimos el artefacto si es la rama main (no en PRs)
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
